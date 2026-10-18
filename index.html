@@ -206,15 +206,15 @@
 
   <main id="chatFeed">
     <div class="card" id="keyCard">
-      <div class="recipe-header">Gemini API Setup</div>
-      <p style="color:var(--muted); font-size:0.8rem; margin-bottom:0.6rem;">
-        Paste your Google AI Studio API key here:
+      <div class="recipe-header">Gemini API Setup & Connection Test</div>
+      <p style="color:var(--muted); font-size:0.8rem; margin-bottom:0.5rem;">
+        Paste your Google AI Studio key below and tap <strong>Test & Save</strong>:
       </p>
       <div style="display:flex; gap:0.4rem;">
-        <input type="password" id="inlineKeyInput" placeholder="Paste AQ... key here" style="background:#140d08; border:1px solid var(--border); padding:0.5rem; border-radius:6px; color:var(--text); font-size:0.82rem; flex:1;">
-        <button id="inlineKeySave" style="background:var(--accent); border:none; color:#120c08; padding:0.5rem 0.9rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.82rem;">Save</button>
+        <input type="text" id="inlineKeyInput" placeholder="Paste AQ... key here" style="background:#140d08; border:1px solid var(--border); padding:0.55rem; border-radius:6px; color:var(--text); font-size:0.82rem; flex:1;">
+        <button id="inlineKeySave" style="background:var(--accent); border:none; color:#120c08; padding:0.55rem 0.85rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.82rem;">Test & Save</button>
       </div>
-      <div id="keyStatusText" style="font-size:0.75rem; color:#81c784; margin-top:0.4rem;"></div>
+      <div id="keyStatusText" style="font-size:0.75rem; margin-top:0.45rem; line-height:1.4;"></div>
     </div>
 
     <div class="card" id="welcomeCard">
@@ -252,18 +252,38 @@
 
     if (savedKey) {
       keyField.value = savedKey;
-      keyStatus.textContent = "✓ Key saved in device storage.";
+      keyStatus.innerHTML = "<span style='color:#81c784;'>✓ Key loaded from storage. Tap 'Test & Save' to verify connection.</span>";
     }
 
-    document.getElementById("inlineKeySave").addEventListener("click", function() {
+    // Direct Connection Verification
+    document.getElementById("inlineKeySave").addEventListener("click", async function() {
       var val = keyField.value.trim();
-      if (val) {
-        localStorage.setItem(KEY_NAME, val);
-        keyStatus.textContent = "✓ Key saved successfully!";
-        keyStatus.style.color = "#81c784";
-      } else {
-        keyStatus.textContent = "Please paste a valid key.";
-        keyStatus.style.color = "#e57373";
+      if (!val) {
+        keyStatus.innerHTML = "<span style='color:#e57373;'>Please paste your API key first.</span>";
+        return;
+      }
+      keyStatus.innerHTML = "<span style='color:var(--accent);'>Testing connection to Google Gemini API...</span>";
+
+      try {
+        var testUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(val);
+        var res = await fetch(testUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "ping" }] }]
+          })
+        });
+        var data = await res.json();
+
+        if (res.ok && data.candidates) {
+          localStorage.setItem(KEY_NAME, val);
+          keyStatus.innerHTML = "<span style='color:#81c784; font-weight:700;'>✓ Success! API key verified & connected to gemini-3.8-flash.</span>";
+        } else {
+          var errDetail = data.error ? (data.error.message || JSON.stringify(data.error)) : ("HTTP Status " + res.status);
+          keyStatus.innerHTML = "<span style='color:#e57373;'>Google API Error: " + errDetail + "</span>";
+        }
+      } catch (err) {
+        keyStatus.innerHTML = "<span style='color:#e57373;'>Network Connection Error: " + err.message + "</span>";
       }
     });
 
@@ -296,9 +316,9 @@
       var text = input.value.trim();
       if (!text) return;
 
-      var apiKey = (localStorage.getItem(KEY_NAME) || "").trim();
+      var apiKey = (localStorage.getItem(KEY_NAME) || keyField.value || "").trim();
       if (!apiKey) {
-        alert("Please paste and save your Gemini API key in the top box first.");
+        alert("Please paste your key in the box above and tap 'Test & Save' first.");
         return;
       }
 
@@ -312,32 +332,26 @@
       var loadDiv = document.createElement("div");
       loadDiv.className = "card";
       loadDiv.style.color = "var(--accent)";
-      loadDiv.textContent = "Formulating dial-in recipe card...";
+      loadDiv.textContent = "Connecting to gemini-3.8-flash...";
       feed.appendChild(loadDiv);
       window.scrollTo(0, document.body.scrollHeight);
 
       var promptWithMeta = text + "\n[Target Water: " + targetWater + "]";
       history.push({ role: "user", parts: [{ text: promptWithMeta }] });
 
-      var controller = new AbortController();
-      var timeoutId = setTimeout(function() { controller.abort(); }, 20000);
-
       try {
-        var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey);
+        var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(apiKey);
         
         var res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
           body: JSON.stringify({
             system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
             contents: history
           })
         });
 
-        clearTimeout(timeoutId);
         loadDiv.remove();
-
         var data = await res.json();
 
         if (res.ok && data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
@@ -349,17 +363,12 @@
           card.innerHTML = parseSimpleMarkdown(raw);
           feed.appendChild(card);
         } else {
-          var msg = (data.error && data.error.message) ? data.error.message : ("Status " + res.status + ": " + JSON.stringify(data));
-          renderError("API Error: " + msg);
+          var msg = (data.error && data.error.message) ? data.error.message : JSON.stringify(data);
+          renderError("Google API Error: " + msg);
         }
       } catch (err) {
-        clearTimeout(timeoutId);
         loadDiv.remove();
-        if (err.name === "AbortError") {
-          renderError("Request timed out after 20 seconds. Please check your internet connection.");
-        } else {
-          renderError("Network error: " + err.message);
-        }
+        renderError("Connection Error: " + err.message);
       }
       window.scrollTo(0, document.body.scrollHeight);
     }

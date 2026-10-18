@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#120e0c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Brewista" />
+  <title>Brewista Dial-In | Specialty Coffee Intelligence</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            espresso: '#120e0c',
+            darkcard: '#1b1411',
+            darkborder: '#2f231d',
+            crema: '#d4a373',
+            cremadark: '#ad7e4f',
+            caramel: '#8b5e3c',
+            latte: '#f4ede4',
+            goldamber: '#f59e0b',
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: manipulation;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #120e0c;
+      color: #ede7df;
+      overscroll-behavior-y: none;
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #342721;
+      border-radius: 9999px;
+    }
+    .chat-bubble-content h1, .chat-bubble-content h2, .chat-bubble-content h3 {
+      font-weight: 700;
+      color: #f4ede4;
+      margin-top: 0.6rem;
+      margin-bottom: 0.35rem;
+    }
+    .chat-bubble-content h3 { font-size: 1.05rem; }
+    .chat-bubble-content p {
+      margin-bottom: 0.5rem;
+      line-height: 1.55;
+    }
+    .chat-bubble-content ul, .chat-bubble-content ol {
+      padding-left: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .chat-bubble-content li {
+      list-style-type: disc;
+      margin-bottom: 0.3rem;
+    }
+    .chat-bubble-content strong {
+      color: #f6c28f;
+    }
+    .chat-bubble-content code {
+      background-color: #2b1f1a;
+      color: #f1b77a;
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.35rem;
+      font-size: 0.82em;
+      font-family: monospace;
+    }
+    .chat-bubble-content blockquote {
+      border-left: 3px solid #d4a373;
+      padding-left: 0.75rem;
+      font-style: italic;
+      color: #d4a373;
+      background: rgba(212, 163, 115, 0.05);
+      border-radius: 0 0.5rem 0.5rem 0;
+      margin: 0.6rem 0;
+      padding: 0.4rem 0.75rem;
+    }
+    .chat-bubble-content hr {
+      border: 0;
+      border-top: 1px solid #342721;
+      margin: 0.75rem 0;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col font-sans overflow-hidden">
+
+  <!-- App Header -->
+  <header class="h-14 flex-none bg-[#16100e]/95 backdrop-blur border-b border-darkborder flex items-center justify-between px-3.5 z-30">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-caramel to-cremadark flex items-center justify-center shadow-lg shadow-caramel/25 text-espresso font-extrabold text-base">
+        <i class="fa-solid fa-mug-hot"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-sm font-bold text-latte tracking-wide">Brewista Dial-In</h1>
+          <span id="modeBadge" class="text-[9px] px-2 py-0.5 rounded-full font-medium bg-amber-950/80 text-amber-200 border border-amber-800/60">Demo Simulation</span>
+        </div>
+        <p class="text-[10px] text-stone-400">Liz's Gear • Gagné/Rao Physics • Round Sweetness</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-1.5">
+      <!-- Session Menu -->
+      <button onclick="toggleSessionModal()" class="w-8 h-8 rounded-lg bg-darkcard border border-darkborder text-stone-300 hover:text-white flex items-center justify-center transition" title="Chat Sessions">
+        <i class="fa-solid fa-clock-rotate-left text-xs"></i>
+      </button>
+      <!-- New Chat Button -->
+      <button onclick="createNewChatSession()" class="w-8 h-8 rounded-lg bg-darkcard border border-darkborder text-crema hover:text-amber-200 flex items-center justify-center transition" title="Start Fresh Bag/Session">
+        <i class="fa-solid fa-plus text-xs"></i>
+      </button>
+      <!-- Quick Gear Spec overview -->
+      <button onclick="switchTab('gear')" class="w-8 h-8 rounded-lg bg-darkcard border border-darkborder text-stone-300 hover:text-white flex items-center justify-center transition" title="Gear & Water Profile">
+        <i class="fa-solid fa-sliders text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Auto-Recall Banner (Visible when previously brewed bean detected) -->
+  <div id="recallBanner" class="hidden bg-gradient-to-r from-amber-950/90 to-[#2c1c14] border-b border-amber-800/50 px-3.5 py-2 text-xs text-amber-200 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-2 truncate">
+      <i class="fa-solid fa-book-bookmark text-crema shrink-0"></i>
+      <span id="recallText" class="truncate font-medium text-[11px]">Bean Vault Match: Found previous dial-in profile!</span>
+    </div>
+    <button onclick="applyRecalledBean()" class="ml-2 px-2.5 py-0.5 rounded-md bg-crema text-espresso font-bold text-[10px] hover:bg-amber-300 transition shrink-0">
+      Apply Past Setting
+    </button>
+  </div>
+
+  <!-- Main Viewports Tabs -->
+  <div class="flex-1 relative overflow-hidden flex flex-col">
+
+    <!-- TAB 1: BREW CHAT VIEW -->
+    <div id="tab-chat" class="tab-view flex-1 flex flex-col h-full overflow-hidden">
+      <!-- Chat Messages Scroll Container -->
+      <main id="chatContainer" class="flex-1 overflow-y-auto p-3.5 space-y-3.5 pb-36">
+        
+        <!-- Welcome Card & Quick Test Triggers -->
+        <div id="introCard" class="bg-gradient-to-b from-darkcard to-[#16100e] rounded-2xl p-4 border border-darkborder shadow-xl">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2.5">
+              <span class="p-2 rounded-xl bg-amber-950/60 text-crema border border-amber-900/40 text-sm">
+                <i class="fa-solid fa-compass-drafting"></i>
+              </span>
+              <div>
+                <h2 class="text-xs font-bold text-latte uppercase tracking-wider">Palate Calibration Active</h2>
+                <p class="text-[11px] text-stone-400">Targeting rounded sweetness, rich caramel/jammy body, zero astringency.</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-stone-500">1Z K-Pro baseline</span>
+          </div>
+
+          <!-- Quick Scenario Beans -->
+          <div class="mt-3.5 pt-3 border-t border-darkborder/70">
+            <p class="text-[10px] font-semibold text-crema uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span><i class="fa-solid fa-vial-circle-check mr-1 text-crema"></i> Instant Test Dial-Ins</span>
+              <span class="text-stone-500 font-normal">Click to test extraction</span>
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <button onclick="loadScenario('A')" class="p-2.5 rounded-xl bg-[#231a16] hover:bg-[#2c201b] border border-darkborder text-left transition group">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-crema group-hover:text-amber-200">DAK Milky Cake</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300">Decaf EA</span>
+                </div>
+                <p class="text-[10px] text-stone-400 mt-1 line-clamp-1">Thermal Shock • Brittle fines & low temp</p>
+              </button>
+
+              <button onclick="loadScenario('B')" class="p-2.5 rounded-xl bg-[#231a16] hover:bg-[#2c201b] border border-darkborder text-left transition group">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-crema group-hover:text-amber-200">Sey / Wendelboe</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-sky-950 text-sky-300">Ultra-Light</span>
+                </div>
+                <p class="text-[10px] text-stone-400 mt-1 line-clamp-1">Washed Eth. • 8d off roast, high energy</p>
+              </button>
+
+              <button onclick="loadScenario('C')" class="p-2.5 rounded-xl bg-[#231a16] hover:bg-[#2c201b] border border-darkborder text-left transition group">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-crema group-hover:text-amber-200">Fabrica Pink Bourbon</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300">Rest 21d</span>
+                </div>
+                <p class="text-[10px] text-stone-400 mt-1 line-clamp-1">Light-Medium • Hario Mugen sweetness</p>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendered Conversation Messages will append here -->
+        <div id="messagesList" class="space-y-3.5"></div>
+      </main>
+
+      <!-- Sticky Floating Interactive Water Quantity Picker + Input Bar -->
+      <div class="fixed bottom-14 left-0 right-0 bg-[#16100e]/95 backdrop-blur-md border-t border-darkborder p-2.5 z-20">
+        <!-- Interactive Water Quantity Quick-Chips -->
+        <div class="max-w-2xl mx-auto flex items-center justify-between mb-2 px-1 text-[11px]">
+          <span class="text-stone-400 flex items-center space-x-1">
+            <i class="fa-solid fa-droplet text-crema"></i>
+            <span>Water Target:</span>
+          </span>
+          <div class="flex space-x-1.5">
+            <button onclick="selectQuickWater(200)" class="px-2.5 py-0.5 rounded-lg bg-darkcard hover:bg-stone-800 border border-darkborder text-stone-300 text-[11px] font-mono">200g</button>
+            <button onclick="selectQuickWater(250)" class="px-2.5 py-0.5 rounded-lg bg-darkcard hover:bg-stone-800 border border-darkborder text-crema font-bold text-[11px] font-mono">250g</button>
+            <button onclick="selectQuickWater(300)" class="px-2.5 py-0.5 rounded-lg bg-darkcard hover:bg-stone-800 border border-darkborder text-stone-300 text-[11px] font-mono">300g</button>
+            <button onclick="selectQuickWater(500)" class="px-2.5 py-0.5 rounded-lg bg-darkcard hover:bg-stone-800 border border-darkborder text-stone-300 text-[11px] font-mono">500g</button>
+          </div>
+        </div>
+
+        <form id="chatForm" onsubmit="handleUserSubmit(event)" class="max-w-2xl mx-auto flex items-end space-x-2">
+          <button type="button" onclick="openBeanModal()" class="p-2.5 rounded-xl bg-darkcard hover:bg-[#231a16] border border-darkborder text-crema transition shrink-0" title="Fill Bean Specifications">
+            <i class="fa-solid fa-seedling text-sm"></i>
+          </button>
+
+          <div class="flex-1 relative">
+            <textarea id="promptInput" rows="1" placeholder="Bean, roaster, rest, or taste issue..." 
+                      class="w-full bg-darkcard text-stone-100 placeholder-stone-500 text-xs sm:text-sm rounded-xl px-3.5 py-2.5 border border-darkborder focus:outline-none focus:border-crema resize-none max-h-32 transition leading-snug"
+                      onkeydown="handleKeyDown(event)" oninput="checkForVaultMatch(this.value)"></textarea>
+          </div>
+
+          <button type="submit" id="sendBtn" class="p-2.5 rounded-xl bg-gradient-to-r from-caramel to-crema text-espresso font-bold hover:brightness-110 active:scale-95 transition shadow-lg shrink-0 flex items-center justify-center w-10 h-10">
+            <i class="fa-solid fa-arrow-up text-sm"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- TAB 2: BEAN VAULT & MEMORY NOTEBOOK -->
+    <div id="tab-vault" class="tab-view flex-1 flex flex-col h-full overflow-hidden hidden bg-[#140f0d]">
+      <div class="p-4 flex-none border-b border-darkborder flex items-center justify-between bg-darkcard">
+        <div>
+          <h2 class="text-sm font-bold text-latte flex items-center space-x-2">
+            <i class="fa-solid fa-box-archive text-crema"></i>
+            <span>Bean Vault & Dial-In Notebook</span>
+          </h2>
+          <p class="text-[11px] text-stone-400">Past brews are automatically recalled when you type bean names.</p>
+        </div>
+        <div class="flex space-x-1.5">
+          <button onclick="exportVaultJSON()" class="p-2 rounded-lg bg-[#241a15] border border-darkborder text-stone-300 hover:text-white text-xs" title="Export Backup">
+            <i class="fa-solid fa-download"></i>
+          </button>
+          <button onclick="importVaultTrigger()" class="p-2 rounded-lg bg-[#241a15] border border-darkborder text-stone-300 hover:text-white text-xs" title="Import Vault">
+            <i class="fa-solid fa-upload"></i>
+          </button>
+          <input type="file" id="vaultFileInput" accept=".json" class="hidden" onchange="handleImportFile(event)">
+          <button onclick="openAddVaultModal()" class="px-3 py-1.5 rounded-lg bg-crema text-espresso font-bold text-xs flex items-center space-x-1 hover:bg-amber-300 transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Bean</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filter Vault -->
+      <div class="p-3 border-b border-darkborder/60 bg-[#16100e]">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-stone-500"></i>
+          <input type="text" id="vaultSearchInput" oninput="renderVaultList()" placeholder="Search roaster, origin, grinder setting, or tasting notes..."
+                 class="w-full bg-darkcard border border-darkborder rounded-xl pl-8 pr-3 py-1.5 text-xs text-stone-200 focus:outline-none focus:border-crema">
+        </div>
+      </div>
+
+      <!-- Vault Cards List -->
+      <div id="vaultListContainer" class="flex-1 overflow-y-auto p-3.5 space-y-3 pb-24">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TAB 3: LIZ'S GEAR & WATER SPEC -->
+    <div id="tab-gear" class="tab-view flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 pb-24 hidden bg-[#140f0d]">
+      <div class="bg-darkcard border border-darkborder rounded-2xl p-4 shadow-md">
+        <h3 class="text-xs font-bold text-crema uppercase tracking-wider mb-2 flex items-center space-x-2">
+          <i class="fa-solid fa-kitchen-set"></i>
+          <span>Liz's Gear Profile (Active in Context)</span>
+        </h3>
+        <p class="text-xs text-stone-300 leading-relaxed">
+          Brewista always recommends the optimal tool from your actual bar setup to prioritize sweet, round cups without harsh lemon acidity:
+        </p>
+
+        <div class="mt-3.5 space-y-3 text-xs">
+          <!-- Brewers -->
+          <div class="p-3 rounded-xl bg-[#231a16] border border-darkborder">
+            <h4 class="font-bold text-latte text-[11px] uppercase tracking-wider mb-1.5 text-crema">
+              <i class="fa-solid fa-filter mr-1"></i> Available Brewers
+            </h4>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-stone-300">
+              <div class="flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check text-crema text-[10px]"></i>
+                <span>Orea V3 / 03 (Flat Bottom)</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check text-crema text-[10px]"></i>
+                <span>Hario Mugen (Single Pour)</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check text-crema text-[10px]"></i>
+                <span>Hario V60 (Glass / Ceramic)</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check text-crema text-[10px]"></i>
+                <span>Deep 27 Flower (Cafec)</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check text-crema text-[10px]"></i>
+                <span>Clever Dripper (Immersion)</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check text-crema text-[10px]"></i>
+                <span>AeroPress + Flow Control</span>
+              </div>
+            </div>
+            <p class="text-[10px] text-stone-400 mt-2 italic">Assist: melodrip drip assist available for gentle laminar dispersals.</p>
+          </div>
+
+          <!-- Grinders -->
+          <div class="p-3 rounded-xl bg-[#231a16] border border-darkborder">
+            <h4 class="font-bold text-latte text-[11px] uppercase tracking-wider mb-1.5 text-crema">
+              <i class="fa-solid fa-gears mr-1"></i> Grinder Reference Dial
+            </h4>
+            <ul class="space-y-1.5 text-[11px] text-stone-300">
+              <li><strong class="text-latte">1Zpresso K-Pro:</strong> Standard pourover ~7.0–7.5. Decafs & thermal shocks coarser at ~7.7–8.0 to prevent fines bed stall.</li>
+              <li><strong class="text-latte">Baratza Encore:</strong> Upgraded burrs.</li>
+              <li><strong class="text-latte">Hiroia Hikaru:</strong> Uniform flat profile.</li>
+            </ul>
+          </div>
+
+          <!-- Water profile -->
+          <div class="p-3 rounded-xl bg-[#231a16] border border-darkborder">
+            <h4 class="font-bold text-latte text-[11px] uppercase tracking-wider mb-1.5 text-crema">
+              <i class="fa-solid fa-flask-vial mr-1"></i> Water Chemistry
+            </h4>
+            <p class="text-[11px] text-stone-300 leading-relaxed">
+              <strong>RO Water + Third Wave Water (TWW) Medium Roast</strong> dosed at <strong>25%–30% strength</strong> (~40–60 ppm). 
+              Finishing drops: <em>JAMM / Lotus drops</em> (potassium & magnesium for body & round sweetness).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETTINGS & API -->
+    <div id="tab-settings" class="tab-view flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 pb-24 hidden bg-[#140f0d]">
+      <div class="bg-darkcard border border-darkborder rounded-2xl p-4 shadow-md space-y-4">
+        <div>
+          <h3 class="text-sm font-bold text-latte flex items-center space-x-2">
+            <i class="fa-solid fa-key text-crema"></i>
+            <span>Gemini API & Grounding Setup</span>
+          </h3>
+          <p class="text-xs text-stone-400 mt-1">
+            Provide a Google Gemini API key to enable live web research on roaster styles, roaster web shops, and Reddit <code>r/pourover</code> sentiment.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-stone-300 text-xs font-semibold mb-1">Gemini API Key</label>
+          <input type="password" id="settingsApiKeyInput" placeholder="AIzaSy..." 
+                 class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-xs text-stone-200 font-mono focus:outline-none focus:border-crema" />
+        </div>
+
+        <div class="flex space-x-2">
+          <button onclick="saveApiKeyFromSettings()" class="flex-1 py-2 rounded-xl bg-crema text-espresso font-bold text-xs hover:bg-amber-300 transition">
+            Save Key
+          </button>
+          <button onclick="clearApiKeyFromSettings()" class="py-2 px-3 rounded-xl bg-[#241a15] border border-darkborder text-rose-400 hover:bg-rose-950/20 text-xs transition">
+            Clear Key (Demo Mode)
+          </button>
+        </div>
+
+        <div class="p-3 rounded-xl bg-[#201713] border border-darkborder text-[11px] text-stone-400 space-y-1.5">
+          <p class="flex items-center space-x-1.5 text-stone-300 font-semibold">
+            <i class="fa-solid fa-shield-halved text-crema"></i>
+            <span>Private & Local</span>
+          </p>
+          <p>Your API key and Bean Vault are saved locally in your phone's browser <code class="text-crema">localStorage</code>. No external analytics or third-party servers.</p>
+        </div>
+
+        <!-- PWA Instructions -->
+        <div class="pt-3 border-t border-darkborder/70">
+          <h4 class="text-xs font-bold text-stone-200 mb-2">Install on iOS or Android</h4>
+          <p class="text-[11px] text-stone-400 leading-relaxed mb-2">
+            In Safari: Tap <strong class="text-stone-300">Share &gt; Add to Home Screen</strong>.<br>
+            In Chrome: Tap <strong class="text-stone-300">Menu (3 dots) &gt; Install App</strong>.
+          </p>
+          <button onclick="clearEntireAppStorage()" class="text-[10px] text-stone-500 hover:text-rose-400 underline">
+            Reset All Sessions & Bean Vault Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="h-14 flex-none bg-[#120e0c] border-t border-darkborder flex items-center justify-around px-2 z-30">
+    <button onclick="switchTab('chat')" id="nav-chat" class="flex flex-col items-center justify-center py-1 px-3 text-crema transition">
+      <i class="fa-solid fa-mug-saucer text-sm"></i>
+      <span class="text-[10px] mt-0.5 font-bold">Dial-In Chat</span>
+    </button>
+
+    <button onclick="switchTab('vault')" id="nav-vault" class="flex flex-col items-center justify-center py-1 px-3 text-stone-400 hover:text-stone-200 transition relative">
+      <i class="fa-solid fa-book-bookmark text-sm"></i>
+      <span class="text-[10px] mt-0.5 font-medium">Bean Vault</span>
+      <span id="vaultBadgeCount" class="absolute top-1 right-2 w-4 h-4 rounded-full bg-caramel text-[9px] font-bold text-white flex items-center justify-center">0</span>
+    </button>
+
+    <button onclick="switchTab('gear')" id="nav-gear" class="flex flex-col items-center justify-center py-1 px-3 text-stone-400 hover:text-stone-200 transition">
+      <i class="fa-solid fa-sliders text-sm"></i>
+      <span class="text-[10px] mt-0.5 font-medium">Liz's Gear</span>
+    </button>
+
+    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center justify-center py-1 px-3 text-stone-400 hover:text-stone-200 transition">
+      <i class="fa-solid fa-gear text-sm"></i>
+      <span class="text-[10px] mt-0.5 font-medium">Settings</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: Quick Bean Specification / Dial-In Form -->
+  <div id="beanModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-[#1c1512] border border-darkborder w-full max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <div class="p-4 border-b border-darkborder flex items-center justify-between bg-darkcard">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-seedling text-crema"></i>
+          <h3 class="font-bold text-latte text-sm">Bean & Dial-In Spec</h3>
+        </div>
+        <button onclick="closeBeanModal()" class="text-stone-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-3.5 text-xs">
+        <div>
+          <label class="block text-stone-300 font-semibold mb-1">Roaster</label>
+          <input type="text" id="formRoaster" placeholder="e.g. DAK Coffee Roasters, Sey, Fabrica, Tim Wendelboe" 
+                 class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-stone-300 font-semibold mb-1">Bean / Origin</label>
+            <input type="text" id="formBean" placeholder="e.g. Milky Cake / Pink Bourbon" 
+                   class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema" />
+          </div>
+          <div>
+            <label class="block text-stone-300 font-semibold mb-1">Process</label>
+            <select id="formProcess" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema">
+              <option value="Washed">Washed / Wet</option>
+              <option value="Natural">Natural / Dry</option>
+              <option value="Honey">Honey / Pulped</option>
+              <option value="Anaerobic / Co-ferment">Anaerobic / Co-ferment</option>
+              <option value="Thermal Shock / EA Decaf">Thermal Shock / EA Decaf</option>
+              <option value="Unknown">Unspecified</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-stone-300 font-semibold mb-1">Days Off Roast / Rest</label>
+            <input type="text" id="formRest" placeholder="e.g. 14 days" 
+                   class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema" />
+          </div>
+          <div>
+            <label class="block text-stone-300 font-semibold mb-1">Target Water Volume</label>
+            <input type="text" id="formWater" placeholder="e.g. 250g (or leave blank to ask)" 
+                   class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-stone-300 font-semibold mb-1">Select Gear to Prioritize</label>
+          <select id="formBrewer" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema">
+            <option value="AI Recommendation" selected>Auto-Select Best Brewer from Liz's Lineup</option>
+            <option value="Orea V3 (Flat-Bottom)">Orea V3 (Rounded body & sweetness)</option>
+            <option value="Hario Mugen">Hario Mugen (Single pour zero bypass sweetness)</option>
+            <option value="Hario V60">Hario V60 (Conical clarity)</option>
+            <option value="Deep 27">Cafec Deep 27 (Concentrated sweet single cup)</option>
+            <option value="Clever Dripper">Clever Dripper (Immersion smoothness)</option>
+            <option value="AeroPress Flow Control">AeroPress Flow Control (Gentle fines control)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-stone-300 font-semibold mb-1">Additional Sensory Observations</label>
+          <textarea id="formNotes" rows="2" placeholder="e.g. Grinding on K-Pro. Previous cup had astringency or tasted thin."
+                    class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:outline-none focus:border-crema resize-none"></textarea>
+        </div>
+      </div>
+
+      <div class="p-3.5 border-t border-darkborder bg-darkcard flex space-x-2">
+        <button onclick="submitBeanForm()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-caramel to-crema text-espresso font-bold hover:brightness-105 active:scale-98 transition flex items-center justify-center space-x-1.5 shadow-lg">
+          <i class="fa-solid fa-mug-hot"></i>
+          <span>Ask Dial-In Engine</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add / Edit Bean to Vault Notebook -->
+  <div id="addVaultModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#1c1512] border border-darkborder w-full max-w-md rounded-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-darkborder flex items-center justify-between bg-darkcard">
+        <h3 id="vaultModalTitle" class="font-bold text-latte text-sm flex items-center space-x-2">
+          <i class="fa-solid fa-bookmark text-crema"></i>
+          <span>Save Bean to Vault</span>
+        </h3>
+        <button onclick="closeAddVaultModal()" class="text-stone-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-3 text-xs">
+        <input type="hidden" id="editVaultId">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Roaster</label>
+            <input type="text" id="vRoaster" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="e.g. DAK">
+          </div>
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Bean / Name</label>
+            <input type="text" id="vBean" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="e.g. Milky Cake">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Process</label>
+            <input type="text" id="vProcess" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="Thermal Shock Decaf">
+          </div>
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Best Brewer</label>
+            <input type="text" id="vBrewer" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="Orea V3">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">K-Pro Setting</label>
+            <input type="text" id="vGrind" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="7.8">
+          </div>
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Water Temp</label>
+            <input type="text" id="vTemp" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="90°C">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Ratio / Dose</label>
+            <input type="text" id="vRatio" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema" placeholder="1:16 (16g : 256g)">
+          </div>
+          <div>
+            <label class="block text-stone-400 font-semibold mb-1">Status</label>
+            <select id="vStatus" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema">
+              <option value="Dialed In (Sweet & Balanced)">Dialed In (Sweet & Balanced)</option>
+              <option value="Work in Progress">Work in Progress</option>
+              <option value="Finished Bag">Finished Bag</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-stone-400 font-semibold mb-1">Tasting & Pour Notes</label>
+          <textarea id="vNotes" rows="2" class="w-full bg-[#241a15] border border-darkborder rounded-xl px-3 py-2 text-stone-200 focus:border-crema resize-none" placeholder="Sweet cardamon, round silky milk texture. Low agitation prevented clogging."></textarea>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-darkborder bg-darkcard flex space-x-2">
+        <button onclick="saveVaultEntry()" class="flex-1 py-2 rounded-xl bg-crema text-espresso font-bold text-xs hover:bg-amber-300 transition">
+          Save Entry
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Chat Sessions Manager -->
+  <div id="sessionModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#1c1512] border border-darkborder w-full max-w-sm rounded-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden text-xs">
+      <div class="p-4 border-b border-darkborder flex items-center justify-between bg-darkcard">
+        <h3 class="font-bold text-latte flex items-center space-x-2">
+          <i class="fa-solid fa-comments text-crema"></i>
+          <span>Chat Sessions History</span>
+        </h3>
+        <button onclick="toggleSessionModal()" class="text-stone-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 border-b border-darkborder flex justify-between items-center bg-[#18120f]">
+        <span class="text-[11px] text-stone-400">Persistent across browser reloads</span>
+        <button onclick="createNewChatSession(); toggleSessionModal();" class="px-2.5 py-1 rounded-lg bg-crema text-espresso font-bold text-[11px]">
+          + New Bag
+        </button>
+      </div>
+
+      <div id="sessionsList" class="p-3 space-y-2 overflow-y-auto flex-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    /* Complete System Prompt for Brewista Skill tailored to Liz's bar */
+    const BREWISTA_SYSTEM_PROMPT = `
+You are Brewista, an elite specialty coffee extraction scientist and dial-in engineer dedicated to Liz's personalized home coffee bar.
+
+LIZ'S PALATE PHILOSOPHY:
+- Liz values: "Round" over "bright", deep transparent sweetness, cooked fruit/jam, rich chocolate/caramel notes, and silky, coated body.
+- Liz dislikes: Sharp citric/lemon brightness, thin tea-like cups, astringency, dry finish, and hollow extraction.
+
+LIZ'S GEAR ARSENAL:
+- Brewers: Hario V60 (glass/ceramic), Hario Mugen (single pour zero-bypass sweetness), Orea V3 / 03 (flat-bottom rounded extraction), Clever Dripper (immersion clarity), AeroPress Flow Control (controlled steep & fines buffer), Deep 27 Flower (narrow steep angle for sweet single cups), Moka Pot, plus melodrip drip assist for ultra-low agitation.
+- Grinder Reference: 1Zpresso K-Pro (Standard pourover 7.0 - 7.5; brittle decafs and thermal shocks 7.7 - 8.0), Baratza Encore (upgraded burrs), Hiroia Hikaru.
+- Water Chemistry: Reverse Osmosis (RO) + Third Wave Water (TWW) Medium Roast profile at 25%-30% strength (~40-60 ppm). Finishing touch: JAMM / Lotus drops for extra potassium/magnesium sweetness and body.
+
+CRITICAL BEHAVIORAL PROTOCOLS:
+1. ROASTER & BEAN RESEARCH PROTOCOL:
+   - When provided with a roaster and bean, search official roaster profiles and specialty forums (Reddit r/pourover and r/coffee).
+   - Evaluate roast philosophy (Nordic ultra-light vs modern light-medium vs omni-roast), resting requirements, and varietal quirks.
+
+2. EXTRACTION SCIENCE (Gagné, Rao, Hoffmann, Hedrick):
+   - Temperature response: High-density ultra-lights need 98°-100°C to dissolve cellular compounds; brittle decafs, naturals, and anaerobic/thermal shocks need lower temperatures (89°-92°C) to prevent stripping woody astringency.
+   - Fines & Agitation: Brittle beans (decafs, Ethiopians) produce micro-fines. Use low agitation, avoid aggressive swirling on final pours to prevent bed choking and channeling.
+
+3. SINGLE BEST BREWER RECOMMENDATION:
+   - Evaluate the bean's density, process, and age against Liz's palate for sweetness and roundness.
+   - Explicitly choose and recommend the SINGLE BEST BREWER from her lineup and explain precisely WHY it wins for this bean.
+
+4. MANDATORY WATER QUANTITY PROMPT:
+   - Always state the brew ratio, and ALWAYS ask: "What quantity of water (in grams or ml) would you like to use for your brew? (e.g. 200g, 250g, 300g, 500g)".
+
+5. MULTI-TURN CONTINUITY:
+   - Reference previous sensory feedback (e.g., if Liz says "it had astringency as it cooled" -> prescribe 0.2 coarser on K-Pro, gentler pour height, or lower temperature).
+`;
+
+    // Local Storage Keys
+    const STORAGE_KEY_SESSIONS = 'brewista_sessions_v2';
+    const STORAGE_KEY_ACTIVE_ID = 'brewista_active_session_id';
+    const STORAGE_KEY_VAULT = 'brewista_bean_vault_v2';
+    const STORAGE_KEY_API = 'brewista_api_key';
+
+    // App State
+    let state = {
+      sessions: [],
+      activeSessionId: null,
+      vault: [],
+      apiKey: localStorage.getItem(STORAGE_KEY_API) || '',
+      recalledBean: null
+    };
+
+    // Default Seed Data for Bean Vault
+    const DEFAULT_VAULT = [
+      {
+        id: 'v_dak_milky',
+        roaster: 'DAK Coffee Roasters',
+        bean: 'Milky Cake',
+        process: 'Thermal Shock Decaf (EA)',
+        brewer: 'Orea V3 (Flat-Bottom)',
+        grind: '7.8 on 1Zpresso K-Pro',
+        temp: '90°C (194°F)',
+        ratio: '1:16 (16g coffee / 256g water)',
+        status: 'Dialed In (Sweet & Balanced)',
+        notes: 'Cardamom, milky sweetness, buttery finish. Avoided swirling on final pour to prevent fines choke.',
+        updatedAt: '2026-10-10'
+      },
+      {
+        id: 'v_fabrica_pink',
+        roaster: 'Fabrica',
+        bean: 'Pink Bourbon',
+        process: 'Washed / Aerobic',
+        brewer: 'Hario Mugen',
+        grind: '7.2 on 1Zpresso K-Pro',
+        temp: '93°C (199°F)',
+        ratio: '1:15 (16g coffee / 240g water)',
+        status: 'Dialed In (Sweet & Balanced)',
+        notes: 'Single continuous pour. Pink grapefruit sweetness without sharp acidity. Very silky body.',
+        updatedAt: '2026-10-14'
+      }
+    ];
+
+    // Pre-engineered Test Scenarios for instant offline simulation
+    const SCENARIOS = {
+      A: {
+        prompt: "I have DAK Milky Cake (Colombia Thermal Shock EA Decaf). Rested 14 days. Recommend the best brew method from my gear, dial-in parameters, and extraction science.",
+        simulated: `### ☕ Roaster & Bean Analysis: DAK Coffee Roasters (Amsterdam)
+**Bean:** Milky Cake — Colombia (Thermal Shock Decaf / Sugar Cane EA)  
+**Roaster Style (r/pourover & DAK consensus):** DAK specializes in high-aromatic, confectionery fruit and dessert profiles. However, combining **Thermal Shock fermentation with Ethyl Acetate (Sugar Cane) Decaffeination** completely modifies bean cellular integrity. The bean is brittle, porous, and unusually soluble.
+
+---
+
+### 🔬 Extraction & Roasting Science Adjustments
+1. **Brittleness & Fines Management:** Decaffeinated cellular walls fracture easily during grinding, producing a significant fraction of micro-fines. Any vigorous swirling will cause fines to migrate to the paper pores, stalling the bed and generating astringency.
+2. **Temperature Modulation:** Highly soluble beans release bitter heavy compounds readily. We drop water temperature to **90°C (194°F)**.
+3. **Degassing Dynamics:** At 14 days, decafs degas faster than dense washed beans; this coffee is in its prime window for peak sweetness.
+
+---
+
+### 🏆 Recommended Brewer: **Orea V3 (Flat-Bottom)**
+* **Why this brewer for Liz's palate:** While a V60 risks clogging at the narrow apex, the Orea V3 spreads the brittle bed over a wide surface area. Combined with fast Kalita 185 papers, it eliminates localized channel bypass, delivering the **rounded, buttery caramel, and velvety cardamom body** Liz prefers over sharp acidity.
+
+---
+
+### 📋 Recommended Dial-In Blueprint
+* **Brewer:** Orea V3 (Flat-bottom)
+* **Grind Setting (1Zpresso K-Pro):** **7.8** (Coarser than standard pourover to compensate for decaf fines)
+* **Water Chemistry:** RO + TWW Medium Roast at 25% (~50 ppm) + 1 drop Lotus Potassium for added mouthfeel
+* **Water Temp:** **90°C (194°F)**
+* **Pour Sequence (Low Agitation):**
+  * **0:00 - 0:45 (Bloom):** 3x coffee weight in water. Gentle wetting with melodrip or low kettle spout. Do not aggressively swirl.
+  * **0:45 - 1:15 (Pour 2):** Slow, laminar concentric pour outwards up to 60% of total brew weight.
+  * **1:30 - 2:00 (Pour 3):** Gentle center trickle to finish. Let drain naturally (Target 2:30 - 2:45).
+
+---
+
+> ❓ **Water Quantity Selection:**
+> **What quantity of water (in grams or ml) would you like to use for your brew?** (e.g., 200g, 250g, 300g, or 500g). Select a quick button below or type your target volume!`
+      },
+      B: {
+        prompt: "I have a washed Ethiopian heirloom from Sey / Wendelboe, 8 days off roast. How do I dial this in for round sweetness with my gear?",
+        simulated: `### ☕ Roaster & Bean Analysis: Sey / Tim Wendelboe
+**Bean:** High-Altitude Washed Ethiopian Heirloom (2,000+ MASL)  
+**Roast Degree:** Nordic Ultra-Light  
+**Roaster Style:** Extremely light, pure terroir transparency. Minimal bean expansion, dense cellulose, and tight cell structure. At **8 days off roast**, the bean is actively releasing trapped CO₂.
+
+---
+
+### 🔬 Extraction Science Calibration
+1. **The 8-Day Freshness Challenge:** Trapped gas bubbles repel water and create dry bypass channels. We must apply an extended **1:15 bloom** to release $CO_2$.
+2. **Thermal Energy Requirement:** Dense ultra-lights demand maximum energy to dissolve delicate sugars. We brew with near-boiling water (**98°C - 100°C**).
+3. **Ethiopian Micro-fines:** Heirloom varieties produce fines. We use early agitation during the bloom to wet every particle, but maintain laminar flow on subsequent pours.
+
+---
+
+### 🏆 Recommended Brewer: **Hario Mugen (or Deep 27)**
+* **Why this brewer for Liz's palate:** Nordic coffees in standard V60s can taste tea-like and overly citric. The **Hario Mugen** restricts bypass and forces complete contact through the coffee column in a steady, unified draw, yielding **maximum sucrose extraction, peach jam sweetness, and a rounded mouthfeel** without biting acid.
+
+---
+
+### 📋 Dial-In Blueprint (Target 1:16 Ratio)
+* **Brewer:** Hario Mugen
+* **1Zpresso K-Pro:** **7.0 - 7.1**
+* **Water Temp:** **99°C (210°F)**
+* **Water Profile:** RO + TWW Medium at 30% strength
+* **Pour Technique:**
+  * **0:00 - 1:15 (Extended Bloom):** 50g boiling water. Let degas completely for 75 seconds.
+  * **1:15 - 2:00 (Single Steady Stream):** Pour remaining water in a controlled center spiral. Let draw down.
+
+---
+
+> ❓ **Water Quantity Selection:**
+> **What quantity of water would you like to use for this brew?** (e.g. 250g or 300g). Let me know and I will calculate the exact gram dose!`
+      },
+      C: {
+        prompt: "Fabrica Colombian Pink Bourbon, light-medium roast, rested 21 days. My gear is 1Zpresso K-Pro and Hario Mugen / Orea. Want round sweetness and balance.",
+        simulated: `### ☕ Roaster & Bean Analysis: Fabrica Coffee Roasters
+**Bean:** Colombia Pink Bourbon (Washed / Aerobic)  
+**Roast Level:** Light-Medium  
+**Resting State:** 21 days (Fully degassed, peak flavor clarity and soluble balance).  
+**Bean Profile:** Pink Bourbon is known for high sucrose and pink grapefruit/floral notes. At 3 weeks rested and roasted light-medium by Fabrica, it dissolves effortlessly.
+
+---
+
+### 🔬 Extraction Science
+1. **Degassing Settled:** With minimal gas interference, extraction happens evenly.
+2. **Palate Matching (Round Sweetness):** We moderate brew temperature to **93°C** and utilize a low-bypass brewer to bring out cooked fruit and milk chocolate undertones while softening citric intensity.
+
+---
+
+### 🏆 Recommended Brewer: **Hario Mugen**
+* **Why this brewer for Liz's palate:** Mugen's star-channel geometry seals paper against the walls, directing 100% of the brew through the bed with zero side bypass. This yields a velvety mouthfeel and balanced sweetness that perfectly honors Liz's flavor goals.
+
+---
+
+### 📋 Dial-In Blueprint
+* **Brewer:** Hario Mugen
+* **1Zpresso K-Pro Setting:** **7.2**
+* **Water Temp:** **93°C (199°F)**
+* **Technique:**
+  * **0:00 - 0:40 (Bloom):** 50g water.
+  * **0:40 - 1:30 (Single continuous pour):** Slow center spiral pour to total weight.
+  * *Target Drawdown:* ~2:30.
+
+---
+
+> ❓ **Water Quantity Selection:**
+> **What quantity of water (in grams or ml) would you like to brew with today?** (e.g. 200g, 250g, 300g, or 500g).`
+      }
+    };
+
+    // Initialize App
+    window.addEventListener('DOMContentLoaded', () => {
+      initStorage();
+      renderChatSessions();
+      renderCurrentChatMessages();
+      renderVaultList();
+      checkApiStatus();
+      autoResizeTextarea();
+    });
+
+    function initStorage() {
+      // Load or create sessions
+      const storedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
+      if (storedSessions) {
+        try {
+          state.sessions = JSON.parse(storedSessions);
+        } catch (e) {
+          state.sessions = [];
+        }
+      }
+
+      if (!state.sessions || state.sessions.length === 0) {
+        const defaultSession = {
+          id: 'session_' + Date.now(),
+          title: 'Welcome & Calibration',
+          messages: [
+            {
+              role: 'model',
+              text: `### 👋 Welcome to Brewista Dial-In, Liz!
+I'm calibrated to your personal bar: **Orea V3, Hario Mugen, Deep 27, AeroPress Flow Control, and 1Zpresso K-Pro**, with RO + Third Wave Water (25-30%).
+
+**My Core Behaviors:**
+1. **Roaster Research & Consensus:** I investigate roaster roast styles and Reddit \`r/pourover\` / \`r/coffee\` threads.
+2. **Extraction Physics:** Grounded in Gagné, Rao, and Hoffmann science (fines migration, bypass, temperature sensitivity).
+3. **Round Sweetness First:** I tailor recipes specifically for rounded, jammy sweetness and silky body over sharp acidity.
+4. **Best Brewer Match:** I evaluate your beans and recommend the **single best brewer** from your lineup.
+5. **Bean Vault Memory:** I remember your dialed-in settings across sessions and alert you when you brew the same bean!
+
+To get started, tap one of the instant test beans above or fill in your bean specs!`
+            }
+          ],
+          updatedAt: new Date().toISOString()
+        };
+        state.sessions = [defaultSession];
+        state.activeSessionId = defaultSession.id;
+        saveSessions();
+      } else {
+        const lastActive = localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
+        state.activeSessionId = lastActive && state.sessions.find(s => s.id === lastActive)
+          ? lastActive
+          : state.sessions[0].id;
+      }
+
+      // Load or seed Bean Vault
+      const storedVault = localStorage.getItem(STORAGE_KEY_VAULT);
+      if (storedVault) {
+        try {
+          state.vault = JSON.parse(storedVault);
+        } catch (e) {
+          state.vault = DEFAULT_VAULT;
+        }
+      } else {
+        state.vault = DEFAULT_VAULT;
+        saveVault();
+      }
+      updateVaultBadge();
+    }
+
+    function saveSessions() {
+      localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(state.sessions));
+      localStorage.setItem(STORAGE_KEY_ACTIVE_ID, state.activeSessionId);
+    }
+
+    function saveVault() {
+      localStorage.setItem(STORAGE_KEY_VAULT, JSON.stringify(state.vault));
+      updateVaultBadge();
+    }
+
+    function updateVaultBadge() {
+      const badge = document.getElementById('vaultBadgeCount');
+      if (badge) badge.innerText = state.vault.length;
+    }
+
+    function getActiveSession() {
+      return state.sessions.find(s => s.id === state.activeSessionId) || state.sessions[0];
+    }
+
+    function checkApiStatus() {
+      const key = localStorage.getItem(STORAGE_KEY_API);
+      const badge = document.getElementById('modeBadge');
+      const input = document.getElementById('settingsApiKeyInput');
+      if (input && key) input.value = key;
+
+      if (key && key.trim().startsWith('AIza')) {
+        state.apiKey = key;
+        badge.innerText = 'Live Gemini 2.5 + Search';
+        badge.className = 'text-[9px] px-2 py-0.5 rounded-full font-medium bg-emerald-950 text-emerald-300 border border-emerald-700/60';
+      } else {
+        state.apiKey = '';
+        badge.innerText = 'Demo Simulation';
+        badge.className = 'text-[9px] px-2 py-0.5 rounded-full font-medium bg-amber-950/80 text-amber-200 border border-amber-800/60';
+      }
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+      const tabs = ['chat', 'vault', 'gear', 'settings'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('nav-' + t);
+        if (t === tabId) {
+          btn.className = 'flex flex-col items-center justify-center py-1 px-3 text-crema transition';
+          btn.querySelector('span').classList.add('font-bold');
+        } else {
+          btn.className = 'flex flex-col items-center justify-center py-1 px-3 text-stone-400 hover:text-stone-200 transition relative';
+          btn.querySelector('span').classList.remove('font-bold');
+        }
+      });
+
+      if (tabId === 'vault') renderVaultList();
+    }
+
+    // Auto-Recall Logic (Checks if typed input matches a saved bean in the Vault)
+    function checkForVaultMatch(inputText) {
+      if (!inputText || inputText.length < 3) {
+        hideRecallBanner();
+        return;
+      }
+      const lower = inputText.toLowerCase();
+      const match = state.vault.find(v => {
+        const roasterMatch = v.roaster && lower.includes(v.roaster.toLowerCase());
+        const beanMatch = v.bean && lower.includes(v.bean.toLowerCase());
+        return roasterMatch || beanMatch;
+      });
+
+      if (match) {
+        state.recalledBean = match;
+        const banner = document.getElementById('recallBanner');
+        const text = document.getElementById('recallText');
+        text.innerText = `Vault Match: "${match.roaster} - ${match.bean}" found (${match.brewer}, K-Pro: ${match.grind})`;
+        banner.classList.remove('hidden');
+      } else {
+        hideRecallBanner();
+      }
+    }
+
+    function hideRecallBanner() {
+      const banner = document.getElementById('recallBanner');
+      banner.classList.add('hidden');
+      state.recalledBean = null;
+    }
+
+    function applyRecalledBean() {
+      if (!state.recalledBean) return;
+      const b = state.recalledBean;
+      const injectionPrompt = `I am brewing ${b.roaster} - ${b.bean} again. From my Bean Vault, my previous dialed-in recipe was:
+- Brewer: ${b.brewer}
+- Grind: ${b.grind}
+- Water Temp: ${b.temp}
+- Ratio: ${b.ratio}
+- Notes: ${b.notes}
+
+Please provide an updated calibration for today's brew and ask for my water quantity.`;
+      document.getElementById('promptInput').value = injectionPrompt;
+      hideRecallBanner();
+      document.getElementById('chatForm').requestSubmit();
+    }
+
+    // Chat Management
+    function createNewChatSession() {
+      const newSession = {
+        id: 'session_' + Date.now(),
+        title: 'New Bag ' + (state.sessions.length + 1),
+        messages: [
+          {
+            role: 'model',
+            text: `### ☕ New Bag Dial-In Session
+Ready to calibrate. What roaster and coffee are we dialing in today? You can specify roast age, processing, or your water volume target.`
+          }
+        ],
+        updatedAt: new Date().toISOString()
+      };
+      state.sessions.unshift(newSession);
+      state.activeSessionId = newSession.id;
+      saveSessions();
+      renderChatSessions();
+      renderCurrentChatMessages();
+      switchTab('chat');
+    }
+
+    function selectChatSession(id) {
+      state.activeSessionId = id;
+      saveSessions();
+      renderChatSessions();
+      renderCurrentChatMessages();
+      toggleSessionModal();
+    }
+
+    function deleteChatSession(id, e) {
+      e.stopPropagation();
+      if (state.sessions.length <= 1) {
+        alert("You must keep at least one active chat session.");
+        return;
+      }
+      state.sessions = state.sessions.filter(s => s.id !== id);
+      if (state.activeSessionId === id) {
+        state.activeSessionId = state.sessions[0].id;
+      }
+      saveSessions();
+      renderChatSessions();
+      renderCurrentChatMessages();
+    }
+
+    function renderChatSessions() {
+      const container = document.getElementById('sessionsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      state.sessions.forEach(sess => {
+        const isActive = sess.id === state.activeSessionId;
+        const div = document.createElement('div');
+        div.onclick = () => selectChatSession(sess.id);
+        div.className = `p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between ${
+          isActive 
+            ? 'bg-[#281d18] border-crema text-latte font-bold shadow' 
+            : 'bg-darkcard border-darkborder text-stone-300 hover:bg-[#201713]'
+        }`;
+        
+        div.innerHTML = `
+          <div class="truncate mr-2">
+            <p class="truncate text-xs">${escapeHTML(sess.title || 'Untitled Session')}</p>
+            <p class="text-[10px] text-stone-500 font-normal mt-0.5">${sess.messages.length} messages • ${new Date(sess.updatedAt).toLocaleDateString()}</p>
+          </div>
+          <button onclick="deleteChatSession('${sess.id}', event)" class="p-1.5 text-stone-500 hover:text-rose-400 rounded-lg transition" title="Delete">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderCurrentChatMessages() {
+      const session = getActiveSession();
+      const list = document.getElementById('messagesList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      session.messages.forEach((msg, idx) => {
+        if (msg.role === 'user') {
+          appendUserMessageDOM(msg.text);
+        } else {
+          appendBotMessageDOM(msg.text, idx);
+        }
+      });
+      scrollToBottom();
+    }
+
+    function toggleSessionModal() {
+      document.getElementById('sessionModal').classList.toggle('hidden');
+    }
+
+    // Quick Water Target Selection
+    function selectQuickWater(grams) {
+      const input = document.getElementById('promptInput');
+      input.value = `I want to use ${grams}g of water for this brew. Please provide the exact coffee dose, grind on K-Pro, and pour schedule.`;
+      document.getElementById('chatForm').requestSubmit();
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chatForm').requestSubmit();
+      }
+    }
+
+    function autoResizeTextarea() {
+      const tx = document.getElementById('promptInput');
+      tx.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      });
+    }
+
+    // Submission handler
+    function handleUserSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('promptInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      hideRecallBanner();
+
+      const session = getActiveSession();
+      // Auto-name untitled session based on user prompt
+      if (session.messages.length <= 1 && text.length > 4) {
+        session.title = text.slice(0, 32) + (text.length > 32 ? '...' : '');
+      }
+
+      session.messages.push({ role: 'user', text: text });
+      session.updatedAt = new Date().toISOString();
+      saveSessions();
+      appendUserMessageDOM(text);
+      showTypingIndicator();
+
+      if (state.apiKey && state.apiKey.trim().startsWith('AIza')) {
+        callGeminiLiveWithHistory();
+      } else {
+        setTimeout(() => {
+          removeTypingIndicator();
+          generateSimulationResponse(text);
+        }, 800);
+      }
+    }
+
+    // Pre-made Scenario Loader
+    function loadScenario(type) {
+      const sc = SCENARIOS[type];
+      if (!sc) return;
+
+      const session = getActiveSession();
+      session.title = type === 'A' ? 'DAK Milky Cake' : (type === 'B' ? 'Sey Washed Ethiopian' : 'Fabrica Pink Bourbon');
+      session.messages.push({ role: 'user', text: sc.prompt });
+      saveSessions();
+      appendUserMessageDOM(sc.prompt);
+      showTypingIndicator();
+
+      if (state.apiKey && state.apiKey.trim().startsWith('AIza')) {
+        callGeminiLiveWithHistory();
+      } else {
+        setTimeout(() => {
+          removeTypingIndicator();
+          session.messages.push({ role: 'model', text: sc.simulated });
+          session.updatedAt = new Date().toISOString();
+          saveSessions();
+          appendBotMessageDOM(sc.simulated, session.messages.length - 1);
+        }, 700);
+      }
+    }
+
+    // Multi-turn Gemini API call with Google Search Grounding and Vault Context Injection
+    async function callGeminiLiveWithHistory() {
+      const session = getActiveSession();
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.apiKey}`;
+
+      // Build context including past bean vault summaries for background memory
+      let systemInstruction = BREWISTA_SYSTEM_PROMPT;
+      if (state.vault.length > 0) {
+        systemInstruction += `\n\nLIZ'S HISTORICAL BEAN VAULT MEMORY (PAST SUCCESSFUL DIAL-INS):`;
+        state.vault.slice(0, 6).forEach(v => {
+          systemInstruction += `\n- ${v.roaster} (${v.bean}): Brewer ${v.brewer}, K-Pro ${v.grind}, Temp ${v.temp}, Ratio ${v.ratio}. Notes: ${v.notes}`;
+        });
+      }
+
+      // Convert stored multi-turn session to Gemini format
+      const contents = session.messages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      }));
+
+      const payload = {
+        system_instruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        contents: contents,
+        tools: [
+          { googleSearch: {} } // Live Google Search Grounding
+        ]
+      };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        removeTypingIndicator();
+
+        const candidate = data?.candidates?.[0];
+        let replyText = candidate?.content?.parts?.[0]?.text || "Unable to extract response from Gemini.";
+
+        // Append search grounding sources
+        const searchChunks = candidate?.groundingMetadata?.groundingChunks;
+        if (searchChunks && searchChunks.length > 0) {
+          replyText += "\n\n---\n**🔍 Researched Roaster & Web Sources:**\n";
+          const uniqueWeb = new Set();
+          searchChunks.forEach(chunk => {
+            if (chunk.web?.uri && chunk.web?.title) {
+              uniqueWeb.add(`* [${chunk.web.title}](${chunk.web.uri})`);
+            }
+          });
+          replyText += Array.from(uniqueWeb).slice(0, 4).join("\n");
+        }
+
+        session.messages.push({ role: 'model', text: replyText });
+        session.updatedAt = new Date().toISOString();
+        saveSessions();
+        appendBotMessageDOM(replyText, session.messages.length - 1);
+
+      } catch (err) {
+        removeTypingIndicator();
+        const errorText = `⚠️ **Gemini API Error:** ${err.message}\n\nPlease check your key in the Settings tab, or clear it to use simulation mode.`;
+        session.messages.push({ role: 'model', text: errorText });
+        saveSessions();
+        appendBotMessageDOM(errorText, session.messages.length - 1);
+      }
+    }
+
+    // Simulation response engine matching multi-turn dialogue
+    function generateSimulationResponse(userPrompt) {
+      const q = userPrompt.toLowerCase();
+      let response = "";
+      const session = getActiveSession();
+
+      // Check if user answered with a water amount
+      const waterMatch = userPrompt.match(/(\d{3})\s*(?:g|grams|ml)?/i);
+      if (waterMatch && (q.includes('water') || q.includes('use') || session.messages.length > 2)) {
+        const waterGrams = parseInt(waterMatch[1], 10);
+        const coffeeDose = (waterGrams / 16).toFixed(1);
+        response = `### ⚖️ Scaled Recipe Calibration (${waterGrams}g Target)
+Based on your requested **${waterGrams}g water volume** at Liz's 1:16 balanced ratio:
+
+* **Coffee Dose:** \`${coffeeDose}g\`
+* **Total Water:** \`${waterGrams}g\`
+* **1Zpresso K-Pro:** \`7.2 - 7.4\` (Adjust +0.2 coarser if decaf/anaerobic)
+* **Water Composition:** RO + TWW Medium Roast (25% strength, ~50 ppm) + 1 drop Lotus Potassium.
+
+#### ⏱️ Step-by-Step Pour Structure
+1. **0:00 - 0:45 (Bloom):** Pour \`${Math.round(coffeeDose * 3)}g\` water. Gentle swirl or excavate with a glass rod. Let bloom 45s.
+2. **0:45 - 1:15 (First Pour):** Concentric laminar pour up to \`${Math.round(waterGrams * 0.6)}g\`.
+3. **1:30 - 2:00 (Finishing Pour):** Gentle center pour straight into the heart of the slurry up to \`${waterGrams}g\`.
+4. *Target Drawdown:* **2:30 – 2:45**.
+
+*Taste calibration note:* After your brew, tell me how it tastes as it cools! If you notice any drying on the palate, we will back off the grind 0.2 clicks.`;
+      } else if (q.includes('dry') || q.includes('astringent') || q.includes('bitter') || q.includes('stall')) {
+        response = `### 🔬 Diagnostic: Solving Astringency & Bed Stalling
+**Physical Diagnosis:**
+The drying sensation on the finish indicates micro-channeling caused by fines migration. When agitated too heavily or ground slightly too fine, fines block the filter pores, forcing water through small high-velocity cracks that strip bitter polyphenols.
+
+**Prescription for Liz's Setup:**
+1. **Adjust 1Zpresso K-Pro:** Move **+0.3 coarser** (e.g. from 7.2 to 7.5).
+2. **Switch to Low-Agitation Brewer:** Use the **Orea V3** with flat Kalita paper, or use the **melodrip assist** to prevent turbulence.
+3. **Water Temp:** Lower kettle by 2°C (e.g., from 94°C to 92°C).
+
+> ❓ **Water Volume:** What water dose are you using so I can give you exact pour weights?`;
+      } else {
+        response = `### ☕ Extraction Plan & Brewer Selection
+Thank you for the bean parameters.
+
+1. **Roaster & Solubility Profile:**
+   For specialty profiles targeting rounded sweetness, we aim for **92°C - 94°C** water temperature to balance deep sucrose caramelization with clean florals.
+2. **Recommended Brewer:**
+   I recommend the **Orea V3 (Flat-Bottom)** or **Hario Mugen** to prioritize viscous body, rich jammy notes, and rounded balance over biting acidity.
+3. **1Zpresso K-Pro Reference:** **7.2 - 7.4** for washed, **7.8** for decaf/anaerobics.
+
+---
+
+> ❓ **Water Quantity Selection:**
+> **What quantity of water (in grams or ml) would you like to use for your brew?** (Choose: 200g, 250g, 300g, or 500g).`;
+      }
+
+      session.messages.push({ role: 'model', text: response });
+      session.updatedAt = new Date().toISOString();
+      saveSessions();
+      appendBotMessageDOM(response, session.messages.length - 1);
+    }
+
+    // DOM Rendering Helpers
+    function appendUserMessageDOM(text) {
+      const container = document.getElementById('messagesList');
+      const div = document.createElement('div');
+      div.className = 'flex items-start justify-end space-x-2 pl-6';
+      div.innerHTML = `
+        <div class="bg-gradient-to-r from-caramel/40 to-crema/25 border border-cremadark/40 rounded-2xl rounded-tr-sm p-3 text-xs text-stone-100 shadow-sm max-w-lg">
+          <p class="whitespace-pre-wrap leading-relaxed">${escapeHTML(text)}</p>
+        </div>
+        <div class="w-7 h-7 rounded-full bg-caramel/30 border border-caramel/60 flex items-center justify-center text-crema text-xs shrink-0 mt-0.5">
+          <i class="fa-solid fa-user"></i>
+        </div>
+      `;
+      container.appendChild(div);
+      scrollToBottom();
+    }
+
+    function appendBotMessageDOM(markdownText, messageIndex) {
+      const container = document.getElementById('messagesList');
+      const div = document.createElement('div');
+      div.className = 'flex items-start space-x-2.5 pr-2';
+
+      const parsedHtml = marked.parse(markdownText);
+
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-xl bg-darkcard border border-darkborder flex items-center justify-center text-crema text-xs shrink-0 mt-1 shadow-md">
+          <i class="fa-solid fa-mug-hot"></i>
+        </div>
+        <div class="flex-1 bg-darkcard border border-darkborder rounded-2xl rounded-tl-sm p-4 text-xs shadow-md chat-bubble-content overflow-x-hidden">
+          ${parsedHtml}
+          
+          <div class="mt-3 pt-2.5 border-t border-darkborder flex items-center justify-between text-[11px]">
+            <button onclick="extractAndSaveToVault(${messageIndex})" class="px-2.5 py-1 rounded-lg bg-[#251b16] hover:bg-[#32241d] border border-darkborder text-crema font-medium flex items-center space-x-1.5 transition">
+              <i class="fa-solid fa-bookmark text-amber-400"></i>
+              <span>Save Recipe to Vault</span>
+            </button>
+            <span class="text-[10px] text-stone-500 font-mono">Brewista Extraction Engine</span>
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+      scrollToBottom();
+    }
+
+    function showTypingIndicator() {
+      removeTypingIndicator();
+      const container = document.getElementById('messagesList');
+      const div = document.createElement('div');
+      div.id = 'typingIndicator';
+      div.className = 'flex items-center space-x-2.5';
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-xl bg-darkcard border border-darkborder flex items-center justify-center text-crema text-xs shrink-0">
+          <i class="fa-solid fa-compass animate-spin text-crema"></i>
+        </div>
+        <div class="bg-darkcard border border-darkborder rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs text-stone-400 flex items-center space-x-2">
+          <span>Synthesizing roaster research & extraction physics</span>
+          <span class="flex space-x-1">
+            <span class="w-1.5 h-1.5 bg-crema rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+            <span class="w-1.5 h-1.5 bg-crema rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+            <span class="w-1.5 h-1.5 bg-crema rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+          </span>
+        </div>
+      `;
+      container.appendChild(div);
+      scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    function scrollToBottom() {
+      const c = document.getElementById('chatContainer');
+      if (c) c.scrollTop = c.scrollHeight;
+    }
+
+    // Bean Vault Actions
+    function renderVaultList() {
+      const container = document.getElementById('vaultListContainer');
+      if (!container) return;
+      const search = (document.getElementById('vaultSearchInput')?.value || '').toLowerCase();
+      container.innerHTML = '';
+
+      const filtered = state.vault.filter(v => 
+        (v.roaster && v.roaster.toLowerCase().includes(search)) ||
+        (v.bean && v.bean.toLowerCase().includes(search)) ||
+        (v.brewer && v.brewer.toLowerCase().includes(search)) ||
+        (v.grind && v.grind.toLowerCase().includes(search)) ||
+        (v.notes && v.notes.toLowerCase().includes(search))
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-stone-500 text-xs">
+            <i class="fa-solid fa-box-open text-2xl mb-2 text-stone-600"></i>
+            <p>No beans saved in the vault yet.</p>
+            <p class="text-[11px] text-stone-600 mt-1">Tap "+ New Bean" or save a recipe card directly from your chat.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'bg-darkcard border border-darkborder rounded-2xl p-4 shadow-md space-y-2.5 text-xs transition hover:border-darkborder/90';
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-crema tracking-wider">${escapeHTML(v.roaster || 'Roaster')}</span>
+              <h3 class="text-sm font-bold text-latte">${escapeHTML(v.bean || 'Single Origin')}</h3>
+              <p class="text-[11px] text-stone-400">${escapeHTML(v.process || 'Process')}</p>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#271b15] text-amber-200 border border-darkborder font-medium">
+                ${escapeHTML(v.status || 'Dialed In')}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-[#211814] border border-darkborder/70 text-[11px]">
+            <div>
+              <span class="text-stone-400 block text-[10px]">Brewer</span>
+              <strong class="text-stone-200">${escapeHTML(v.brewer || 'Orea V3')}</strong>
+            </div>
+            <div>
+              <span class="text-stone-400 block text-[10px]">1Z K-Pro Grind</span>
+              <strong class="text-crema">${escapeHTML(v.grind || '7.2')}</strong>
+            </div>
+            <div>
+              <span class="text-stone-400 block text-[10px]">Water Temp</span>
+              <span class="text-stone-200 font-mono">${escapeHTML(v.temp || '93°C')}</span>
+            </div>
+            <div>
+              <span class="text-stone-400 block text-[10px]">Ratio / Dose</span>
+              <span class="text-stone-200 font-mono">${escapeHTML(v.ratio || '1:16')}</span>
+            </div>
+          </div>
+
+          ${v.notes ? `<p class="text-[11px] text-stone-300 italic bg-[#1a1310] p-2 rounded-lg border border-darkborder/50">"${escapeHTML(v.notes)}"</p>` : ''}
+
+          <div class="flex items-center justify-between pt-1">
+            <button onclick="brewFromVault('${v.id}')" class="px-3 py-1 rounded-lg bg-gradient-to-r from-caramel to-crema text-espresso font-bold text-[11px] flex items-center space-x-1 hover:brightness-105 transition">
+              <i class="fa-solid fa-mug-saucer"></i>
+              <span>Dial In with this Profile</span>
+            </button>
+            <div class="flex space-x-1">
+              <button onclick="editVaultEntry('${v.id}')" class="p-1.5 text-stone-400 hover:text-white rounded-lg bg-[#241a15] border border-darkborder text-xs" title="Edit">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button onclick="deleteVaultEntry('${v.id}')" class="p-1.5 text-stone-400 hover:text-rose-400 rounded-lg bg-[#241a15] border border-darkborder text-xs" title="Delete">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function brewFromVault(vaultId) {
+      const v = state.vault.find(item => item.id === vaultId);
+      if (!v) return;
+      switchTab('chat');
+      const prompt = `I am brewing ${v.roaster} - ${v.bean} (${v.process}). 
+From my Bean Vault records, my best settings were:
+- Brewer: ${v.brewer}
+- 1Z K-Pro Grind: ${v.grind}
+- Water Temp: ${v.temp}
+- Ratio: ${v.ratio}
+- Notes: ${v.notes}
+
+Please calibrate this recipe for today and ask for my target water quantity.`;
+      document.getElementById('promptInput').value = prompt;
+      document.getElementById('chatForm').requestSubmit();
+    }
+
+    function extractAndSaveToVault(messageIndex) {
+      const session = getActiveSession();
+      const msg = session.messages[messageIndex];
+      if (!msg) return;
+
+      openAddVaultModal();
+      document.getElementById('vRoaster').value = session.title.includes('DAK') ? 'DAK Coffee Roasters' : (session.title.includes('Sey') ? 'Sey' : 'Specialty Roaster');
+      document.getElementById('vBean').value = session.title.replace('New Bag', '').trim() || 'Single Origin';
+      document.getElementById('vNotes').value = 'Extracted from dial-in chat conversation.';
+      
+      // Auto-extract common keywords from text
+      if (msg.text.includes('Orea')) document.getElementById('vBrewer').value = 'Orea V3 (Flat-Bottom)';
+      else if (msg.text.includes('Mugen')) document.getElementById('vBrewer').value = 'Hario Mugen';
+      else if (msg.text.includes('V60')) document.getElementById('vBrewer').value = 'Hario V60';
+      
+      const grindMatch = msg.text.match(/(?:K-Pro|grind)[^0-9]*([678]\.[0-9])/i);
+      if (grindMatch) document.getElementById('vGrind').value = grindMatch[1];
+
+      const tempMatch = msg.text.match(/([89][0-9]°C)/i);
+      if (tempMatch) document.getElementById('vTemp').value = tempMatch[1];
+    }
+
+    function openAddVaultModal() {
+      document.getElementById('editVaultId').value = '';
+      document.getElementById('vaultModalTitle').innerText = 'Save Bean to Vault';
+      document.getElementById('vRoaster').value = '';
+      document.getElementById('vBean').value = '';
+      document.getElementById('vProcess').value = '';
+      document.getElementById('vBrewer').value = 'Orea V3 (Flat-Bottom)';
+      document.getElementById('vGrind').value = '7.2';
+      document.getElementById('vTemp').value = '93°C';
+      document.getElementById('vRatio').value = '1:16';
+      document.getElementById('vNotes').value = '';
+      document.getElementById('addVaultModal').classList.remove('hidden');
+    }
+
+    function closeAddVaultModal() {
+      document.getElementById('addVaultModal').classList.add('hidden');
+    }
+
+    function editVaultEntry(id) {
+      const v = state.vault.find(item => item.id === id);
+      if (!v) return;
+      document.getElementById('editVaultId').value = v.id;
+      document.getElementById('vaultModalTitle').innerText = 'Edit Bean Vault Record';
+      document.getElementById('vRoaster').value = v.roaster || '';
+      document.getElementById('vBean').value = v.bean || '';
+      document.getElementById('vProcess').value = v.process || '';
+      document.getElementById('vBrewer').value = v.brewer || '';
+      document.getElementById('vGrind').value = v.grind || '';
+      document.getElementById('vTemp').value = v.temp || '';
+      document.getElementById('vRatio').value = v.ratio || '';
+      document.getElementById('vStatus').value = v.status || 'Dialed In (Sweet & Balanced)';
+      document.getElementById('vNotes').value = v.notes || '';
+      document.getElementById('addVaultModal').classList.remove('hidden');
+    }
+
+    function saveVaultEntry() {
+      const editId = document.getElementById('editVaultId').value;
+      const roaster = document.getElementById('vRoaster').value.trim() || 'Roaster';
+      const bean = document.getElementById('vBean').value.trim() || 'Bean';
+
+      const entry = {
+        id: editId || ('v_' + Date.now()),
+        roaster: roaster,
+        bean: bean,
+        process: document.getElementById('vProcess').value.trim() || 'Washed',
+        brewer: document.getElementById('vBrewer').value.trim() || 'Orea V3',
+        grind: document.getElementById('vGrind').value.trim() || '7.2',
+        temp: document.getElementById('vTemp').value.trim() || '93°C',
+        ratio: document.getElementById('vRatio').value.trim() || '1:16',
+        status: document.getElementById('vStatus').value,
+        notes: document.getElementById('vNotes').value.trim(),
+        updatedAt: new Date().toISOString().split('T')[0]
+      };
+
+      if (editId) {
+        state.vault = state.vault.map(v => v.id === editId ? entry : v);
+      } else {
+        state.vault.unshift(entry);
+      }
+
+      saveVault();
+      closeAddVaultModal();
+      renderVaultList();
+    }
+
+    function deleteVaultEntry(id) {
+      if (!confirm("Are you sure you want to remove this bean from your vault?")) return;
+      state.vault = state.vault.filter(v => v.id !== id);
+      saveVault();
+      renderVaultList();
+    }
+
+    // JSON Backup Export / Import
+    function exportVaultJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.vault, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `brewista_vault_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importVaultTrigger() {
+      document.getElementById('vaultFileInput').click();
+    }
+
+    function handleImportFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            state.vault = imported;
+            saveVault();
+            renderVaultList();
+            alert(`Successfully imported ${imported.length} beans into your vault!`);
+          } else {
+            alert("Invalid backup file format.");
+          }
+        } catch (err) {
+          alert("Error parsing JSON file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Modal Bean Form Quick Submission
+    function openBeanModal() {
+      document.getElementById('beanModal').classList.remove('hidden');
+    }
+
+    function closeBeanModal() {
+      document.getElementById('beanModal').classList.add('hidden');
+    }
+
+    function submitBeanForm() {
+      const roaster = document.getElementById('formRoaster').value.trim() || 'Specialty Roaster';
+      const bean = document.getElementById('formBean').value.trim() || 'Single Origin';
+      const process = document.getElementById('formProcess').value;
+      const rest = document.getElementById('formRest').value.trim() || '14 days';
+      const water = document.getElementById('formWater').value.trim();
+      const brewer = document.getElementById('formBrewer').value;
+      const notes = document.getElementById('formNotes').value.trim();
+
+      const prompt = `Please build a dialed-in recipe from Liz's bar for:
+- Roaster: ${roaster}
+- Coffee: ${bean}
+- Process: ${process}
+- Rest Days: ${rest}
+- Preferred Brewer: ${brewer}
+${water ? `- Target Water: ${water}` : '- (Ask me for my target water quantity)'}
+${notes ? `- Extra notes: ${notes}` : ''}
+
+Please evaluate the roaster's style, explain why the recommended brewer suits my palate for round sweetness, state grind setting on 1Z K-Pro, and provide the exact pour breakdown.`;
+
+      closeBeanModal();
+      switchTab('chat');
+      document.getElementById('promptInput').value = prompt;
+      document.getElementById('chatForm').requestSubmit();
+    }
+
+    // Settings & Keys
+    function saveApiKeyFromSettings() {
+      const key = document.getElementById('settingsApiKeyInput').value.trim();
+      if (key) {
+        localStorage.setItem(STORAGE_KEY_API, key);
+        state.apiKey = key;
+        alert("Gemini API key saved! Live web research with Google Search grounding is now active.");
+      }
+      checkApiStatus();
+      switchTab('chat');
+    }
+
+    function clearApiKeyFromSettings() {
+      localStorage.removeItem(STORAGE_KEY_API);
+      state.apiKey = '';
+      document.getElementById('settingsApiKeyInput').value = '';
+      checkApiStatus();
+      alert("API Key cleared. App switched back to offline extraction simulation mode.");
+    }
+
+    function clearEntireAppStorage() {
+      if (!confirm("This will erase all chat sessions and your Bean Vault. Continue?")) return;
+      localStorage.clear();
+      location.reload();
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>

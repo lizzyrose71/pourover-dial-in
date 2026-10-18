@@ -393,7 +393,10 @@ Give NO conversational intro, pleasantries, or preamble. Jump directly into the 
           body: JSON.stringify({
             system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
             contents: history,
-            tools: [{ google_search: {} }]
+           body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: history
+      })
           })
         });
 

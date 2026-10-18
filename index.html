@@ -205,7 +205,6 @@
   </header>
 
   <main id="chatFeed">
-    <!-- Visible Key Setup Box directly in view -->
     <div class="card" id="keyCard">
       <div class="recipe-header">Gemini API Setup</div>
       <p style="color:var(--muted); font-size:0.8rem; margin-bottom:0.6rem;">
@@ -247,10 +246,9 @@
 
     var SYSTEM_PROMPT = "You are Liz's specialty coffee dial-in companion. Liz prioritizes sweet, round, balanced cups, silky body, and transparent finish. She dislikes sharp lemon acidity, thin tea brews, astringent dryness, and over-extracted bitterness.\n\nEQUIPMENT:\n- Brewers: Orea V3 / 03, Hario Mugen, Hario V60 (ceramic/glass), Deep 27 Flower, Clever Dripper, AeroPress Flow Control, melodrip.\n- Grinder: 1Zpresso K-Pro (baseline 7.0-7.5; decafs 7.7-8.0).\n- Water: RO + Third Wave Water Medium Roast at 25-30% strength (~45-55 ppm) with optional Lotus JAMM drops.\n\nCRITICAL OUTPUT FORMAT RULE:\nGive NO conversational intro, pleasantries, or preamble. Jump directly into the Recipe:\n\n### [Roaster] - [Bean Name]\n**Target Water:** [Quantity requested] | **Coffee Dose:** [Grams for 1:15 to 1:16] | **Water Temp:** [C / F]\n\n- **Recommended Brewer:** [State exact brewer and 1 short sentence why it fits this roast/process]\n- **Grind Size:** [1Zpresso K-Pro clicks, e.g., 7.2]\n- **Water Chemistry:** RO + 25-30% TWW Medium Roast (add 1 drop JAMM if sweet finish is needed)\n\n#### Pour Schedule:\n| Step | Time | Weight | Technique |\n|---|---|---|---|\n| Bloom | 0:00 - 0:45 | [grams] | Gentle circle, low agitation |\n| Pour 1 | 0:45 - 1:20 | [grams] | Gentle center spiral |\n| Pour 2 | 1:20 - 2:30 | [total] | Low-flow pour (melodrip if available) |\n\n**Target Drawdown:** [e.g., 2:45 - 3:05]\n**Cooling Diagnostic:** [1 sentence on what to expect as it cools and when to adjust grind by 0.2 clicks]";
 
-    // Initialize saved key
-    var savedKey = localStorage.getItem(KEY_NAME) || "";
     var keyStatus = document.getElementById("keyStatusText");
     var keyField = document.getElementById("inlineKeyInput");
+    var savedKey = (localStorage.getItem(KEY_NAME) || "").trim();
 
     if (savedKey) {
       keyField.value = savedKey;
@@ -262,13 +260,13 @@
       if (val) {
         localStorage.setItem(KEY_NAME, val);
         keyStatus.textContent = "✓ Key saved successfully!";
+        keyStatus.style.color = "#81c784";
       } else {
         keyStatus.textContent = "Please paste a valid key.";
         keyStatus.style.color = "#e57373";
       }
     });
 
-    // Water Chips
     var chips = document.querySelectorAll(".water-chip");
     for (var i = 0; i < chips.length; i++) {
       chips[i].addEventListener("click", function() {
@@ -280,19 +278,11 @@
       });
     }
 
-    // Clear Feed
     document.getElementById("clearBtn").addEventListener("click", function() {
       history = [];
-      var feed = document.getElementById("chatFeed");
-      var welcome = document.createElement("div");
-      welcome.className = "card";
-      welcome.innerHTML = '<div class="recipe-header">Ready to Dial In</div><p style="color:var(--muted); font-size:0.8rem; margin-top:0.3rem;">Select your water volume, type your coffee, and hit the arrow.</p>';
-      feed.innerHTML = "";
-      feed.appendChild(document.getElementById("keyCard") || "");
-      feed.appendChild(welcome);
+      location.reload();
     });
 
-    // Send Button
     document.getElementById("sendBtn").addEventListener("click", submitPrompt);
     document.getElementById("coffeeInput").addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
@@ -306,7 +296,7 @@
       var text = input.value.trim();
       if (!text) return;
 
-      var apiKey = localStorage.getItem(KEY_NAME);
+      var apiKey = (localStorage.getItem(KEY_NAME) || "").trim();
       if (!apiKey) {
         alert("Please paste and save your Gemini API key in the top box first.");
         return;
@@ -329,21 +319,28 @@
       var promptWithMeta = text + "\n[Target Water: " + targetWater + "]";
       history.push({ role: "user", parts: [{ text: promptWithMeta }] });
 
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 20000);
+
       try {
-        var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + apiKey;
+        var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey);
+        
         var res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
             contents: history
           })
         });
 
-        var data = await res.json();
+        clearTimeout(timeoutId);
         loadDiv.remove();
 
-        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+        var data = await res.json();
+
+        if (res.ok && data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
           var raw = data.candidates[0].content.parts[0].text;
           history.push({ role: "model", parts: [{ text: raw }] });
 
@@ -352,21 +349,28 @@
           card.innerHTML = parseSimpleMarkdown(raw);
           feed.appendChild(card);
         } else {
-          var errDiv = document.createElement("div");
-          errDiv.className = "card";
-          errDiv.style.color = "#e57373";
-          errDiv.textContent = "Error: " + (data.error ? (data.error.message || JSON.stringify(data.error)) : JSON.stringify(data));
-          feed.appendChild(errDiv);
+          var msg = (data.error && data.error.message) ? data.error.message : ("Status " + res.status + ": " + JSON.stringify(data));
+          renderError("API Error: " + msg);
         }
       } catch (err) {
+        clearTimeout(timeoutId);
         loadDiv.remove();
-        var connErr = document.createElement("div");
-        connErr.className = "card";
-        connErr.style.color = "#e57373";
-        connErr.textContent = "Connection error: " + err.message;
-        feed.appendChild(connErr);
+        if (err.name === "AbortError") {
+          renderError("Request timed out after 20 seconds. Please check your internet connection.");
+        } else {
+          renderError("Network error: " + err.message);
+        }
       }
       window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function renderError(msg) {
+      var feed = document.getElementById("chatFeed");
+      var errDiv = document.createElement("div");
+      errDiv.className = "card";
+      errDiv.style.color = "#e57373";
+      errDiv.textContent = msg;
+      feed.appendChild(errDiv);
     }
 
     function parseSimpleMarkdown(md) {

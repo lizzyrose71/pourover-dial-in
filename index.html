@@ -392,10 +392,7 @@ Give NO conversational intro, pleasantries, or preamble. Jump directly into the 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: history,
-           body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: history
+            contents: history
       })
           })
         });

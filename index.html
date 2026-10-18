@@ -187,27 +187,6 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(0,0,0,0.75);
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    .modal-content {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      width: 100%;
-      max-width: 420px;
-      padding: 1.2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
   </style>
 </head>
 <body>
@@ -221,12 +200,24 @@
       </div>
     </div>
     <div style="display:flex; gap:0.4rem;">
-      <button class="btn-icon" id="keyBtn" title="API Key">🔑</button>
       <button class="btn-icon" id="clearBtn" title="Clear">🗑️</button>
     </div>
   </header>
 
   <main id="chatFeed">
+    <!-- Visible Key Setup Box directly in view -->
+    <div class="card" id="keyCard">
+      <div class="recipe-header">Gemini API Setup</div>
+      <p style="color:var(--muted); font-size:0.8rem; margin-bottom:0.6rem;">
+        Paste your Google AI Studio API key here:
+      </p>
+      <div style="display:flex; gap:0.4rem;">
+        <input type="password" id="inlineKeyInput" placeholder="Paste AQ... key here" style="background:#140d08; border:1px solid var(--border); padding:0.5rem; border-radius:6px; color:var(--text); font-size:0.82rem; flex:1;">
+        <button id="inlineKeySave" style="background:var(--accent); border:none; color:#120c08; padding:0.5rem 0.9rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.82rem;">Save</button>
+      </div>
+      <div id="keyStatusText" style="font-size:0.75rem; color:#81c784; margin-top:0.4rem;"></div>
+    </div>
+
     <div class="card" id="welcomeCard">
       <div class="recipe-header">Ready to Dial In</div>
       <p style="color:var(--muted); font-size:0.8rem; margin-top:0.3rem;">
@@ -249,89 +240,61 @@
     </div>
   </div>
 
-  <div class="modal" id="keyModal">
-    <div class="modal-content">
-      <h3 style="color:var(--accent); font-size:1rem;">Gemini API Key</h3>
-      <p style="font-size:0.78rem; color:var(--muted);">
-        Paste your Google AI Studio API key. It is saved directly in your phone:
-      </p>
-      <input type="password" id="keyInput" placeholder="AQ..." style="background:#140d08; border:1px solid var(--border); padding:0.6rem; border-radius:8px; color:var(--text); font-size:0.85rem; width:100%;">
-      <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.3rem;">
-        <button id="cancelKey" style="background:#221710; border:1px solid var(--border); color:var(--muted); padding:0.45rem 0.8rem; border-radius:6px; cursor:pointer;">Cancel</button>
-        <button id="saveKey" style="background:var(--accent); border:none; color:#120c08; padding:0.45rem 0.8rem; border-radius:6px; font-weight:700; cursor:pointer;">Save</button>
-      </div>
-    </div>
-  </div>
-
   <script>
-    const KEY_NAME = "brewista_key";
-    let targetWater = "250g";
-    let history = [];
+    var KEY_NAME = "brewista_key";
+    var targetWater = "250g";
+    var history = [];
 
-    const SYSTEM_PROMPT = `You are Liz's specialty coffee dial-in companion. Liz prioritizes sweet, round, balanced cups, silky body, and transparent finish. She dislikes sharp lemon acidity, thin tea brews, astringent dryness, and over-extracted bitterness.
+    var SYSTEM_PROMPT = "You are Liz's specialty coffee dial-in companion. Liz prioritizes sweet, round, balanced cups, silky body, and transparent finish. She dislikes sharp lemon acidity, thin tea brews, astringent dryness, and over-extracted bitterness.\n\nEQUIPMENT:\n- Brewers: Orea V3 / 03, Hario Mugen, Hario V60 (ceramic/glass), Deep 27 Flower, Clever Dripper, AeroPress Flow Control, melodrip.\n- Grinder: 1Zpresso K-Pro (baseline 7.0-7.5; decafs 7.7-8.0).\n- Water: RO + Third Wave Water Medium Roast at 25-30% strength (~45-55 ppm) with optional Lotus JAMM drops.\n\nCRITICAL OUTPUT FORMAT RULE:\nGive NO conversational intro, pleasantries, or preamble. Jump directly into the Recipe:\n\n### [Roaster] - [Bean Name]\n**Target Water:** [Quantity requested] | **Coffee Dose:** [Grams for 1:15 to 1:16] | **Water Temp:** [C / F]\n\n- **Recommended Brewer:** [State exact brewer and 1 short sentence why it fits this roast/process]\n- **Grind Size:** [1Zpresso K-Pro clicks, e.g., 7.2]\n- **Water Chemistry:** RO + 25-30% TWW Medium Roast (add 1 drop JAMM if sweet finish is needed)\n\n#### Pour Schedule:\n| Step | Time | Weight | Technique |\n|---|---|---|---|\n| Bloom | 0:00 - 0:45 | [grams] | Gentle circle, low agitation |\n| Pour 1 | 0:45 - 1:20 | [grams] | Gentle center spiral |\n| Pour 2 | 1:20 - 2:30 | [total] | Low-flow pour (melodrip if available) |\n\n**Target Drawdown:** [e.g., 2:45 - 3:05]\n**Cooling Diagnostic:** [1 sentence on what to expect as it cools and when to adjust grind by 0.2 clicks]";
 
-EQUIPMENT:
-- Brewers: Orea V3 / 03, Hario Mugen, Hario V60 (ceramic/glass), Deep 27 Flower, Clever Dripper, AeroPress Flow Control, melodrip.
-- Grinder: 1Zpresso K-Pro (baseline 7.0-7.5; decafs 7.7-8.0).
-- Water: RO + Third Wave Water Medium Roast at 25-30% strength (~45-55 ppm) with optional Lotus JAMM drops.
+    // Initialize saved key
+    var savedKey = localStorage.getItem(KEY_NAME) || "";
+    var keyStatus = document.getElementById("keyStatusText");
+    var keyField = document.getElementById("inlineKeyInput");
 
-CRITICAL OUTPUT FORMAT RULE:
-Give NO conversational intro, pleasantries, or preamble. Jump directly into the Recipe:
+    if (savedKey) {
+      keyField.value = savedKey;
+      keyStatus.textContent = "✓ Key saved in device storage.";
+    }
 
-### [Roaster] - [Bean Name]
-**Target Water:** [Quantity requested] | **Coffee Dose:** [Grams for 1:15 to 1:16] | **Water Temp:** [°C / °F]
+    document.getElementById("inlineKeySave").addEventListener("click", function() {
+      var val = keyField.value.trim();
+      if (val) {
+        localStorage.setItem(KEY_NAME, val);
+        keyStatus.textContent = "✓ Key saved successfully!";
+      } else {
+        keyStatus.textContent = "Please paste a valid key.";
+        keyStatus.style.color = "#e57373";
+      }
+    });
 
-- **Recommended Brewer:** [State exact brewer and 1 short sentence why it fits this roast/process]
-- **Grind Size:** [1Zpresso K-Pro clicks, e.g., 7.2]
-- **Water Chemistry:** RO + 25-30% TWW Medium Roast (add 1 drop JAMM if sweet finish is needed)
-
-#### Pour Schedule:
-| Step | Time | Weight | Technique |
-|---|---|---|---|
-| Bloom | 0:00 - 0:45 | [grams] | Gentle circle, low agitation |
-| Pour 1 | 0:45 - 1:20 | [grams] | Gentle center spiral |
-| Pour 2 | 1:20 - 2:30 | [total] | Low-flow pour (melodrip if available) |
-
-**Target Drawdown:** [e.g., 2:45 - 3:05]
-**Cooling Diagnostic:** [1 sentence on what to expect as it cools and when to adjust grind by 0.2 clicks]`;
-
-    // Interactive Water Chips
-    document.querySelectorAll(".water-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        document.querySelectorAll(".water-chip").forEach(c => c.classList.remove("active"));
-        chip.classList.add("active");
-        targetWater = chip.getAttribute("data-water");
+    // Water Chips
+    var chips = document.querySelectorAll(".water-chip");
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].addEventListener("click", function() {
+        for (var j = 0; j < chips.length; j++) {
+          chips[j].classList.remove("active");
+        }
+        this.classList.add("active");
+        targetWater = this.getAttribute("data-water");
       });
-    });
+    }
 
-    // Key Modal Handlers
-    const keyModal = document.getElementById("keyModal");
-    document.getElementById("keyBtn").addEventListener("click", () => {
-      document.getElementById("keyInput").value = localStorage.getItem(KEY_NAME) || "";
-      keyModal.style.display = "flex";
-    });
-    document.getElementById("cancelKey").addEventListener("click", () => keyModal.style.display = "none");
-    document.getElementById("saveKey").addEventListener("click", () => {
-      localStorage.setItem(KEY_NAME, document.getElementById("keyInput").value.trim());
-      keyModal.style.display = "none";
-    });
-
-    // Clear Chat
-    document.getElementById("clearBtn").addEventListener("click", () => {
+    // Clear Feed
+    document.getElementById("clearBtn").addEventListener("click", function() {
       history = [];
-      document.getElementById("chatFeed").innerHTML = `
-        <div class="card">
-          <div class="recipe-header">Ready to Dial In</div>
-          <p style="color:var(--muted); font-size:0.8rem; margin-top:0.3rem;">
-            Select your water volume, type your coffee, and hit the arrow.
-          </p>
-        </div>
-      `;
+      var feed = document.getElementById("chatFeed");
+      var welcome = document.createElement("div");
+      welcome.className = "card";
+      welcome.innerHTML = '<div class="recipe-header">Ready to Dial In</div><p style="color:var(--muted); font-size:0.8rem; margin-top:0.3rem;">Select your water volume, type your coffee, and hit the arrow.</p>';
+      feed.innerHTML = "";
+      feed.appendChild(document.getElementById("keyCard") || "");
+      feed.appendChild(welcome);
     });
 
-    // Submit Prompts
+    // Send Button
     document.getElementById("sendBtn").addEventListener("click", submitPrompt);
-    document.getElementById("coffeeInput").addEventListener("keydown", (e) => {
+    document.getElementById("coffeeInput").addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
         e.preventDefault();
         submitPrompt();
@@ -339,38 +302,36 @@ Give NO conversational intro, pleasantries, or preamble. Jump directly into the 
     });
 
     async function submitPrompt() {
-      const input = document.getElementById("coffeeInput");
-      const text = input.value.trim();
+      var input = document.getElementById("coffeeInput");
+      var text = input.value.trim();
       if (!text) return;
 
-      const apiKey = localStorage.getItem(KEY_NAME);
+      var apiKey = localStorage.getItem(KEY_NAME);
       if (!apiKey) {
-        keyModal.style.display = "flex";
+        alert("Please paste and save your Gemini API key in the top box first.");
         return;
       }
 
-      const feed = document.getElementById("chatFeed");
-      const welcome = document.getElementById("welcomeCard");
-      if (welcome) welcome.remove();
-
-      const userDiv = document.createElement("div");
+      var feed = document.getElementById("chatFeed");
+      var userDiv = document.createElement("div");
       userDiv.className = "user-bubble";
-      userDiv.textContent = `${text} (${targetWater})`;
+      userDiv.textContent = text + " (" + targetWater + ")";
       feed.appendChild(userDiv);
       input.value = "";
 
-      const loadDiv = document.createElement("div");
+      var loadDiv = document.createElement("div");
       loadDiv.className = "card";
       loadDiv.style.color = "var(--accent)";
       loadDiv.textContent = "Formulating dial-in recipe card...";
       feed.appendChild(loadDiv);
       window.scrollTo(0, document.body.scrollHeight);
 
-      const promptWithMeta = `${text}\\n[Target Water: ${targetWater}]`;
+      var promptWithMeta = text + "\n[Target Water: " + targetWater + "]";
       history.push({ role: "user", parts: [{ text: promptWithMeta }] });
 
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+        var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + apiKey;
+        var res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -379,19 +340,19 @@ Give NO conversational intro, pleasantries, or preamble. Jump directly into the 
           })
         });
 
-        const data = await res.json();
+        var data = await res.json();
         loadDiv.remove();
 
         if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
-          const raw = data.candidates[0].content.parts[0].text;
+          var raw = data.candidates[0].content.parts[0].text;
           history.push({ role: "model", parts: [{ text: raw }] });
-          
-          const card = document.createElement("div");
+
+          var card = document.createElement("div");
           card.className = "card";
-          card.innerHTML = parseMarkdown(raw);
+          card.innerHTML = parseSimpleMarkdown(raw);
           feed.appendChild(card);
         } else {
-          const errDiv = document.createElement("div");
+          var errDiv = document.createElement("div");
           errDiv.className = "card";
           errDiv.style.color = "#e57373";
           errDiv.textContent = "Error: " + (data.error ? (data.error.message || JSON.stringify(data.error)) : JSON.stringify(data));
@@ -399,26 +360,45 @@ Give NO conversational intro, pleasantries, or preamble. Jump directly into the 
         }
       } catch (err) {
         loadDiv.remove();
-        const errDiv = document.createElement("div");
-        errDiv.className = "card";
-        errDiv.style.color = "#e57373";
-        errDiv.textContent = "Connection error: " + err.message;
-        feed.appendChild(errDiv);
+        var connErr = document.createElement("div");
+        connErr.className = "card";
+        connErr.style.color = "#e57373";
+        connErr.textContent = "Connection error: " + err.message;
+        feed.appendChild(connErr);
       }
       window.scrollTo(0, document.body.scrollHeight);
     }
 
-    function parseMarkdown(md) {
-      return md
-        .replace(/^### (.*$)/gim, '<div class="recipe-header">$1</div>')
-        .replace(/^#### (.*$)/gim, '<div style="color:var(--accent); font-weight:700; margin-top:0.6rem; font-size:0.85rem;">$1</div>')
-        .replace(/\\*\\*(.*?)\\*\\*/gim, '<strong>$1</strong>')
-        .replace(/\\|(.+)\\|/g, function(match) {
-          const cells = match.split('|').filter(c => c.trim() !== '');
-          return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
-        })
-        .replace(/(<tr>.*<\\/tr>)/gis, '<table>$1</table>')
-        .replace(/\\n/g, '<br>');
+    function parseSimpleMarkdown(md) {
+      var lines = md.split("\n");
+      var html = "";
+      var inTable = false;
+
+      for (var k = 0; k < lines.length; k++) {
+        var line = lines[k].trim();
+        if (line.indexOf("### ") === 0) {
+          html += '<div class="recipe-header">' + line.substring(4) + '</div>';
+        } else if (line.indexOf("#### ") === 0) {
+          html += '<div style="color:var(--accent); font-weight:700; margin-top:0.6rem; font-size:0.85rem;">' + line.substring(5) + '</div>';
+        } else if (line.indexOf("|") === 0) {
+          if (line.indexOf("|---|") !== -1) continue;
+          if (!inTable) { html += "<table>"; inTable = true; }
+          var parts = line.split("|").slice(1, -1);
+          html += "<tr>";
+          for (var p = 0; p < parts.length; p++) {
+            html += "<td>" + parts[p].trim() + "</td>";
+          }
+          html += "</tr>";
+        } else {
+          if (inTable) { html += "</table>"; inTable = false; }
+          if (line.length > 0) {
+            var formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html += "<p style='margin-bottom:0.3rem;'>" + formatted + "</p>";
+          }
+        }
+      }
+      if (inTable) html += "</table>";
+      return html;
     }
   </script>
 </body>
